@@ -121,7 +121,7 @@ fi
 
 mkdir -p ${GEODE_BUILD}
 if [ -v CALL_STACK_TIMEOUT ]; then
-  geode-ci/ci/scripts/capture-call-stacks.sh  ${CALL_STACK_TIMEOUT} &
+  geode-ci-dunit/ci/scripts/capture-call-stacks.sh  ${CALL_STACK_TIMEOUT} &
 fi
 
 pushd geode
