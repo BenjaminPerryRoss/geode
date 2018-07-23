@@ -77,7 +77,11 @@ else
 fi
 
 printf "\nUsing the following JDK:"
-java -version
+if [ -n "${JAVA_HOME}" ]; then
+  ${JAVA_HOME}/bin/java -version
+else
+  java -version
+fi
 printf "\n\n"
 
 directories_file=${DEST_DIR}/artifact_directories
