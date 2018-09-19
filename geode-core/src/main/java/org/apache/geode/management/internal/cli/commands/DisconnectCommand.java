@@ -28,7 +28,7 @@ import org.apache.geode.management.internal.cli.shell.OperationInvoker;
 
 public class DisconnectCommand extends InternalGfshCommand {
   @CliCommand(value = {CliStrings.DISCONNECT}, help = CliStrings.DISCONNECT__HELP)
-  @CliMetaData(shellOnly = true, relatedTopic = {CliStrings.TOPIC_GFSH, CliStrings.TOPIC_GEODE_JMX,
+  @CliMetaData(requireLocalExecution = true, relatedTopic = {CliStrings.TOPIC_GFSH, CliStrings.TOPIC_GEODE_JMX,
       CliStrings.TOPIC_GEODE_MANAGER})
   public Result disconnect() {
     Result result;

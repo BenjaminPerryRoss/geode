@@ -19,23 +19,25 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.geode.cache.client.ClientCache;
+import org.apache.geode.cache.execute.Execution;
+import org.apache.geode.cache.execute.FunctionService;
 import org.apache.logging.log4j.Logger;
+import org.springframework.shell.ShellException;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
 
 import org.apache.geode.cache.configuration.CacheConfig;
-import org.apache.geode.cache.configuration.CacheElement;
 import org.apache.geode.cache.configuration.JndiBindingsType;
 import org.apache.geode.distributed.DistributedMember;
-import org.apache.geode.distributed.internal.InternalConfigurationPersistenceService;
 import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.management.cli.CliMetaData;
 import org.apache.geode.management.cli.SingleGfshCommand;
-import org.apache.geode.management.internal.cli.exceptions.EntityExistsException;
 import org.apache.geode.management.internal.cli.functions.CliFunctionResult;
 import org.apache.geode.management.internal.cli.functions.CreateJndiBindingFunction;
 import org.apache.geode.management.internal.cli.i18n.CliStrings;
 import org.apache.geode.management.internal.cli.result.model.ResultModel;
+import org.apache.geode.management.internal.cli.shell.Gfsh;
 import org.apache.geode.management.internal.security.ResourceOperation;
 import org.apache.geode.security.ResourcePermission;
 
@@ -95,7 +97,7 @@ public class CreateJndiBindingCommand extends SingleGfshCommand {
       "Properties for the custom XADataSource driver. Append json string containing (name, type, value) to set any property. Eg: --datasource-config-properties={'name':'name1','type':'type1','value':'value1'},{'name':'name2','type':'type2','value':'value2'}";
 
   @CliCommand(value = CREATE_JNDIBINDING, help = CREATE_JNDIBINDING__HELP)
-  @CliMetaData(relatedTopic = CliStrings.TOPIC_GEODE_REGION)
+  @CliMetaData(relatedTopic = CliStrings.TOPIC_GEODE_REGION, requireLocalExecution = true)
   @ResourceOperation(resource = ResourcePermission.Resource.CLUSTER,
       operation = ResourcePermission.Operation.MANAGE)
   public ResultModel createJDNIBinding(
@@ -141,25 +143,43 @@ public class CreateJndiBindingCommand extends SingleGfshCommand {
     configuration.setType(type.getType());
     configuration.setUserName(username);
     configuration.setXaDatasourceClass(xaDataSource);
+
+    Gfsh gfsh = Gfsh.getCurrentInstance();
+
+    if (gfsh == null) {
+      throw new ShellException("Error when attempting to access local shell");
+    }
+
+    if (username == null) {
+      gfsh.readText("Username: ");
+    }
+
+    if (password == null) {
+      gfsh.readPassword("Password");
+    }
+
     if (dsConfigProperties != null && dsConfigProperties.length > 0)
       configuration.getConfigProperties().addAll(Arrays.asList(dsConfigProperties));
 
-    InternalConfigurationPersistenceService service =
-        (InternalConfigurationPersistenceService) getConfigurationPersistenceService();
+    // InternalConfigurationPersistenceService service =
+    // (InternalConfigurationPersistenceService) getConfigurationPersistenceService();
+    //
+    // if (service != null) {
+    // CacheConfig cacheConfig = service.getCacheConfig("cluster");
+    // if (cacheConfig != null) {
+    // JndiBindingsType.JndiBinding existing =
+    // CacheElement.findElement(cacheConfig.getJndiBindings(), jndiName);
+    // if (existing != null) {
+    // throw new EntityExistsException(
+    // CliStrings.format("Jndi binding with jndi-name \"{0}\" already exists.", jndiName),
+    // ifNotExists);
+    // }
+    // }
+    // }
 
-    if (service != null) {
-      CacheConfig cacheConfig = service.getCacheConfig("cluster");
-      if (cacheConfig != null) {
-        JndiBindingsType.JndiBinding existing =
-            CacheElement.findElement(cacheConfig.getJndiBindings(), jndiName);
-        if (existing != null) {
-          throw new EntityExistsException(
-              CliStrings.format("Jndi binding with jndi-name \"{0}\" already exists.", jndiName),
-              ifNotExists);
-        }
-      }
-    }
+    ClientCache cache = null;//some stuff
 
+    Execution ex = FunctionService.onServers(cache.getDefaultPool());
     Set<DistributedMember> targetMembers = findMembers(null, null);
     if (targetMembers.size() > 0) {
       List<CliFunctionResult> jndiCreationResult = executeAndGetFunctionResult(
