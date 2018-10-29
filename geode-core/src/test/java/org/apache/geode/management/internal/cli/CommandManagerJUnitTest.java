@@ -18,9 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Properties;
+import java.lang.reflect.Method;
+import java.util.*;
 
 import com.examples.UserGfshCommand;
+import org.apache.geode.internal.ClassPathLoader;
+import org.apache.geode.management.cli.GfshCommand;
+import org.apache.geode.management.internal.cli.commands.InternalGfshCommand;
+import org.apache.geode.management.internal.cli.util.ClasspathScanLoadHelper;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.shell.core.CommandMarker;
@@ -97,8 +102,33 @@ public class CommandManagerJUnitTest {
    */
   @Test
   public void testCommandManagerLoadCommands() {
+    Set<String> packagesToScan = new HashSet<>();
+    packagesToScan.add(GfshCommand.class.getPackage().getName());
+    packagesToScan.add(InternalGfshCommand.class.getPackage().getName());
+
+    ClasspathScanLoadHelper scanner = new ClasspathScanLoadHelper(packagesToScan);
+
     assertNotNull(commandManager);
-    assertThat(commandManager.getCommandMarkers().size()).isGreaterThan(0);
+    ServiceLoader<CommandMarker> loader =
+    ServiceLoader.load(CommandMarker.class, ClassPathLoader.getLatest().asClassLoader());
+    loader.reload();
+    Iterator<CommandMarker> iterator = loader.iterator();
+
+    Set<Class<?>> foundClasses;
+
+    // geode's commands
+    foundClasses = scanner.scanPackagesForClassesImplementing(CommandMarker.class,
+            GfshCommand.class.getPackage().getName(),
+            InternalGfshCommand.class.getPackage().getName());
+
+    int markerCount = foundClasses.size();
+
+    while(iterator.hasNext()) {
+        System.out.println("CommandMarker name: "+ iterator.next().getClass().getName());
+        markerCount++;
+    }
+
+    assertThat(commandManager.getCommandMarkers().size()).isEqualTo(markerCount);
     assertThat(commandManager.getConverters().size()).isGreaterThan(0);
   }
 
