@@ -27,6 +27,7 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -62,6 +63,16 @@ public class DriverJarUtil {
     registerDriverWithDriverManager(d);
   }
 
+  public void deregisterDriver(String driverClassName) throws SQLException {
+    Enumeration<Driver> driverEnumeration = getDrivers();
+    Driver driver;
+    while(driverEnumeration.hasMoreElements()) {
+      driver = driverEnumeration.nextElement();
+      if(compareDriverClassName(driver, driverClassName)) {
+        deregisterDriverWithDriverManager(driver);
+      }
+    }
+  }
 
   public String getJdbcDriverName(String driverJarName) throws IOException {
     return getJdbcDriverName(createDeployedJar(driverJarName));
@@ -129,9 +140,20 @@ public class DriverJarUtil {
       throws ClassNotFoundException, IllegalAccessException, InstantiationException {
     return (Driver) Class.forName(driverClassName, true, urlClassLoader).newInstance();
   }
+  Enumeration<Driver> getDrivers() {
+    return DriverManager.getDrivers();
+  }
+
+  boolean compareDriverClassName(Driver driver, String driverClassName) {
+    return driver.getClass().getName().equals(driverClassName);
+  }
 
   void registerDriverWithDriverManager(Driver driver) throws SQLException {
     DriverManager.registerDriver(driver);
+  }
+
+  void deregisterDriverWithDriverManager(Driver driver) throws SQLException {
+    DriverManager.deregisterDriver(driver);
   }
 
   // DriverManager only uses a driver loaded by system ClassLoader
