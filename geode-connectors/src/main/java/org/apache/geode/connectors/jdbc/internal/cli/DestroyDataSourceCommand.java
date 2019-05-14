@@ -18,6 +18,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.geode.management.internal.cli.result.model.DataResultModel;
+import org.apache.geode.management.internal.cli.result.model.InfoResultModel;
 import org.springframework.shell.core.annotation.CliAvailabilityIndicator;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
@@ -121,21 +123,25 @@ public class DestroyDataSourceCommand extends SingleGfshCommand {
       }
 
       ResultModel result = ResultModel.createMemberStatusResult(dataSourceDestroyResult);
+      InfoResultModel infoModel = result.addInfo();
       String deregisterResult = deregisterDriver(deregisterDriver, driverClassName, dataSourceName);
       if(deregisterResult != null) {
-        result.addInfo(deregisterResult);
+        infoModel.addLine(deregisterResult);
       }
       result.setConfigObject(dataSourceName);
 
       return result;
     } else {
       if (service != null) {
-        ResultModel result =
-            ResultModel
-                .createInfo("No members found, data source removed from cluster configuration.");
+        //ResultModel result =
+        //    ResultModel
+        //        .createInfo("No members found, data source removed from cluster configuration.");
+        ResultModel result = new ResultModel();
+        InfoResultModel infoModel = result.addInfo();
+        infoModel.addLine("No members found, data source removed from cluster configuration.");
         String deregisterResult = deregisterDriver(deregisterDriver, driverClassName, dataSourceName);
         if(deregisterResult != null) {
-          result.addInfo(deregisterResult);
+          infoModel.addLine(deregisterResult);
         }
         result.setConfigObject(dataSourceName);
         return result;
@@ -171,7 +177,7 @@ public class DestroyDataSourceCommand extends SingleGfshCommand {
 
   private String deregisterDriver(boolean deregisterDriver, String driverClassName, String dataSourceName) {
     if(deregisterDriver && driverClassName != null) {
-      DriverJarUtil util = new DriverJarUtil();
+      DriverJarUtil util = createDriverJarUtil();
       try {
         util.deregisterDriver(driverClassName);
       } catch (SQLException ex) {
@@ -181,6 +187,10 @@ public class DestroyDataSourceCommand extends SingleGfshCommand {
       return "Warning: deregistering \"" + driverClassName + "\" while destroying data source \"" + dataSourceName + "\" failed: No driver class name found";
     }
     return null;
+  }
+
+  DriverJarUtil createDriverJarUtil() {
+    return new DriverJarUtil();
   }
 
   @Override

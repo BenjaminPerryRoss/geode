@@ -68,6 +68,7 @@ public class DriverJarUtilTest {
   public void deregisterDriverSucceedsWithClassName() throws SQLException {
     String driverName = "driver-name";
     Enumeration<Driver> drivers = mock(Enumeration.class);
+    doReturn(drivers).when(util).getDrivers();
     Driver driver = mock(Driver.class);
     when(drivers.hasMoreElements()).thenReturn(true).thenReturn(false);
     when(drivers.nextElement()).thenReturn(driver);
