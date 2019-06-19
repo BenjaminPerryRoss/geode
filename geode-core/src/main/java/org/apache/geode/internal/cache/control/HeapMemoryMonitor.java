@@ -417,7 +417,9 @@ public class HeapMemoryMonitor implements NotificationListener, MemoryMonitor {
       if (evictionThreshold != 0 && this.thresholds.isCriticalThresholdEnabled()
           && evictionThreshold >= this.thresholds.getCriticalThreshold()) {
         throw new IllegalArgumentException(
-            "Eviction percentage must be less than the critical percentage.");
+            "Eviction percentage (" + evictionThreshold
+                + ") must be less than the critical percentage ("
+                + thresholds.getCriticalThreshold() + ").");
       }
 
       this.thresholds = new MemoryThresholds(this.thresholds.getMaxMemoryBytes(),
