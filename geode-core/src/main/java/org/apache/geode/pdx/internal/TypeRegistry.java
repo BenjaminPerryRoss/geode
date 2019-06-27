@@ -198,7 +198,6 @@ public class TypeRegistry {
         return existingType;
       }
     }
-
     int id = this.distributedTypeRegistry.defineType(newType);
     PdxType oldType = this.idToType.get(id);
     if (oldType == null) {
@@ -561,5 +560,21 @@ public class TypeRegistry {
 
   Map<Class<?>, PdxType> getLocalTypeIds() {
     return localTypeIds;
+  }
+
+  public void removeType(int typeId) {
+    PdxType existingType = this.idToType.get(typeId);
+    if (existingType == null) {
+      throw new IllegalStateException("PDX type with id " + typeId + " was not found.");
+    }
+
+    this.distributedTypeRegistry.removeType(typeId);
+    PdxType removedType = this.idToType.get(typeId);
+    this.idToType.remove(typeId);
+    this.typeToId.remove(removedType);
+    if (logger.isInfoEnabled()) {
+      logger.info("Removed {}", removedType.toFormattedString());
+    }
+
   }
 }

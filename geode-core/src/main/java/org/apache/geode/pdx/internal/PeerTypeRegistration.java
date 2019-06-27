@@ -373,15 +373,36 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
   }
 
+  @Override
+  public void removeType(int typeId) {
+    verifyConfiguration();
+
+    lock();
+    try {
+      PdxType unusedType = (PdxType) idToType.get(typeId);
+
+      updateRegion(typeId, unusedType, true);
+
+      typeToId.remove(unusedType);
+
+    } finally {
+      unlock();
+    }
+  }
+
   private void updateIdToTypeRegion(PdxType newType) {
-    updateRegion(newType.getTypeId(), newType);
+    updateRegion(newType.getTypeId(), newType, false);
+  }
+
+  private void updateIdToTypeRegion(PdxType newType, boolean destroy) {
+    updateRegion(newType.getTypeId(), newType, destroy);
   }
 
   private void updateIdToEnumRegion(EnumId id, EnumInfo ei) {
-    updateRegion(id, ei);
+    updateRegion(id, ei, false);
   }
 
-  private void updateRegion(Object k, Object v) {
+  private void updateRegion(Object k, Object v, boolean destroy) {
     Region<Object, Object> r = getIdToType();
     InternalCache cache = (InternalCache) r.getRegionService();
 
@@ -399,7 +420,11 @@ public class PeerTypeRegistration implements TypeRegistration {
       while (true) {
         txManager.begin();
         try {
-          r.put(k, v);
+          if (destroy) {
+            r.destroy(k);
+          } else {
+            r.put(k, v);
+          }
           txManager.commit();
           return;
         } catch (TransactionException e) {

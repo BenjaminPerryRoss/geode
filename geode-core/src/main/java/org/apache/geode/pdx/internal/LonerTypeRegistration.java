@@ -185,4 +185,9 @@ public class LonerTypeRegistration implements TypeRegistration {
   public int getLocalSize() {
     return delegate.getLocalSize();
   }
+
+  @Override
+  public void removeType(int typeId) {
+
+  }
 }
