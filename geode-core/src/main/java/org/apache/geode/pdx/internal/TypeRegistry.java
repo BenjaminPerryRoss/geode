@@ -577,4 +577,18 @@ public class TypeRegistry {
     }
 
   }
+
+  public void removeType(PdxType type) {
+    if (!this.typeMap().containsValue(type)) {
+      throw new IllegalStateException("PDX type " + type + " was not found.");
+    }
+    this.distributedTypeRegistry.removeType(type);
+    int removedTypeId = this.typeToId.get(type);
+    this.idToType.remove(removedTypeId);
+    this.typeToId.remove(type);
+    if (logger.isInfoEnabled()) {
+      logger.info("Removed {}", type.toFormattedString());
+    }
+
+  }
 }

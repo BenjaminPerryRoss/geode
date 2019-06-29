@@ -390,6 +390,26 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
   }
 
+  @Override
+  public void removeType(PdxType type) {
+    verifyConfiguration();
+
+    lock();
+    try {
+      if (!this.types().containsValue(type)) {
+        throw new IllegalStateException("Type " + type + " was not found");
+      }
+      int unusedTypeId = typeToId.get(type);
+
+      updateRegion(unusedTypeId, type, true);
+
+      typeToId.remove(type);
+
+    } finally {
+      unlock();
+    }
+  }
+
   private void updateIdToTypeRegion(PdxType newType) {
     updateRegion(newType.getTypeId(), newType, false);
   }

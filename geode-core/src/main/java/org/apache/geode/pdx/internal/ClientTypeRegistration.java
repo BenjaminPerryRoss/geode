@@ -378,4 +378,9 @@ public class ClientTypeRegistration implements TypeRegistration {
   public void removeType(int typeId) {
 
   }
+
+  @Override
+  public void removeType(PdxType type) {
+
+  }
 }

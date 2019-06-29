@@ -95,4 +95,6 @@ public interface TypeRegistration {
   int getLocalSize();
 
   void removeType(int typeId);
+
+  void removeType(PdxType type);
 }
