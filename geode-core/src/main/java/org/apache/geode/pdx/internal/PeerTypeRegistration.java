@@ -395,16 +395,32 @@ public class PeerTypeRegistration implements TypeRegistration {
     verifyConfiguration();
 
     lock();
+    boolean error = false;
+    StringBuilder errorString = null;
+    int unusedTypeId = -1;
     try {
-      if (!this.types().containsValue(type)) {
-        throw new IllegalStateException("Type " + type + " was not found");
+      if ((this.typeToId.get(type) == null && types().containsValue(type))
+          || (this.typeToId.get(type) != null && !types().containsValue(type))) {
+        error = true;
+        errorString.append("Disagreement between idToType and typeToId \n");
       }
-      int unusedTypeId = typeToId.get(type);
-
-      updateRegion(unusedTypeId, type, true);
-
-      typeToId.remove(type);
-
+      if (this.typeToId.get(type) == null) {
+        error = true;
+        errorString.append("Type " + type + " was not found locally in PeerTypeRegistration\n");
+      } else {
+        // int unusedTypeId = getExistingIdForType(type);
+        unusedTypeId = this.typeToId.get(type);
+        typeToId.remove(type);
+      }
+      if (!this.types().containsValue(type)) {
+        error = true;
+        errorString.append("Type " + type + " was not found in PeerTypeRegistration\n");
+      } else if (unusedTypeId != -1) {
+        updateRegion(unusedTypeId, type, true);
+      }
+      if (error) {
+        throw new IllegalStateException(errorString.toString());
+      }
     } finally {
       unlock();
     }

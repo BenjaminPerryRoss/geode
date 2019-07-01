@@ -565,7 +565,7 @@ public class TypeRegistry {
   public void removeType(int typeId) {
     PdxType existingType = this.idToType.get(typeId);
     if (existingType == null) {
-      throw new IllegalStateException("PDX type with id " + typeId + " was not found.");
+      throw new IllegalStateException("PDX type with id " + typeId + " was not found");
     }
 
     this.distributedTypeRegistry.removeType(typeId);
@@ -579,16 +579,35 @@ public class TypeRegistry {
   }
 
   public void removeType(PdxType type) {
-    if (!this.typeMap().containsValue(type)) {
-      throw new IllegalStateException("PDX type " + type + " was not found.");
+    if (false/* !this.typeMap().containsValue(type) */) {
+      throw new IllegalStateException("PDX type " + type + " was not found in TypeRegistry");
     }
-    this.distributedTypeRegistry.removeType(type);
-    int removedTypeId = this.typeToId.get(type);
-    this.idToType.remove(removedTypeId);
-    this.typeToId.remove(type);
-    if (logger.isInfoEnabled()) {
-      logger.info("Removed {}", type.toFormattedString());
+    try {
+      this.distributedTypeRegistry.removeType(type);
+    } catch (Exception ex) {
+      throw new IllegalStateException(
+          "Exception " + ex + " while removing type from distributedTypeRegistry");
+    }
+    if (this.idToType.get(type) != null) {
+      int removedTypeId = this.typeToId.get(type);
+      this.idToType.remove(removedTypeId);
+      this.typeToId.remove(type);
+      removeLocalType(type);
+      if (logger.isInfoEnabled()) {
+        logger.info("Removed {}", type.toFormattedString());
+      }
+    } else {
+      throw new IllegalStateException(
+          "PDX type " + type + " was not found locally in TypeRegistry");
     }
 
+  }
+
+  private void removeLocalType(PdxType type) {
+    for (Object object : getLocalTypeIds().keySet()) {
+      if (getLocalTypeIds().get(object) == type) {
+        removeLocal(object);
+      }
+    }
   }
 }
