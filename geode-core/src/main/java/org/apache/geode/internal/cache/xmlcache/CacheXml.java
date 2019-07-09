@@ -584,6 +584,7 @@ public abstract class CacheXml implements EntityResolver2, ErrorHandler {
   protected static final String MULTICAST_ENABLED = "multicast-enabled";
   protected static final String JNDI_BINDINGS = "jndi-bindings";
   protected static final String JNDI_BINDING = "jndi-binding";
+  protected static final String REGISTERED_DRIVERS = "registered-driver";
   /** The name of the <code>config-property</code> value */
   protected static final String CONFIG_PROPERTY_BINDING = "config-property";
   /** The name of the <code>config-property-name</code> value */

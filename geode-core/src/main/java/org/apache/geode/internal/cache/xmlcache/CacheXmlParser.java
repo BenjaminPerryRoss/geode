@@ -2749,6 +2749,10 @@ public class CacheXmlParser extends CacheXml implements ContentHandler {
       mapJNDI(atts, gfSpecific);
       List vendorSpecific = new ArrayList();
       this.stack.push(new BindingCreation(gfSpecific, vendorSpecific));
+    } else if (qName.equals(REGISTERED_DRIVERS)) {
+      for (int i = 0; i < atts.getLength(); i++) {
+        logger.info("Driver Attribute: " + atts.getValue(i));
+      }
     } else if (qName.equals(CONFIG_PROPERTY_BINDING)) {
       // Asif : Peek at the BindingCreation object from stack
       // & get the vendor specific data map
@@ -3052,6 +3056,8 @@ public class CacheXmlParser extends CacheXml implements ContentHandler {
             logger.warn("jndi-binding creation of {} failed with: {}", map.get("jndi-name"), ex);
           }
         }
+      } else if (qName.equals(REGISTERED_DRIVERS)) {
+
       } else if (qName.equals(CONFIG_PROPERTY_BINDING)) {
       } else if (qName.equals(CONFIG_PROPERTY_NAME)) {
         String name = null;

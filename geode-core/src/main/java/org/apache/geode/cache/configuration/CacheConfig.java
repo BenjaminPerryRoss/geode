@@ -236,6 +236,7 @@ import org.apache.geode.internal.config.VersionAdapter;
  *           &lt;element name="region" type="{http://geode.apache.org/schema/cache}region-type"/>
  *           &lt;element name="vm-root-region" type="{http://geode.apache.org/schema/cache}region-type"/>
  *         &lt;/choice>
+ *         &lt;element name="registered-drivers" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="function-service" type="{http://geode.apache.org/schema/cache}function-service-type" minOccurs="0"/>
  *         &lt;element name="resource-manager" type="{http://geode.apache.org/schema/cache}resource-manager-type" minOccurs="0"/>
  *         &lt;element name="serialization-registration" type="{http://geode.apache.org/schema/cache}serialization-registration-type" minOccurs="0"/>
@@ -261,7 +262,7 @@ import org.apache.geode.internal.config.VersionAdapter;
 @XmlType(name = "",
     propOrder = {"cacheTransactionManager", "dynamicRegionFactory", "gatewayHubs", "gatewaySenders",
         "gatewayReceiver", "gatewayConflictResolver", "asyncEventQueues", "cacheServers", "pools",
-        "diskStores", "pdx", "regionAttributes", "jndiBindings", "regions", "functionService",
+        "diskStores", "pdx", "regionAttributes", "jndiBindings", "registeredDriverNames" "regions", "functionService",
         "resourceManager", "serializationRegistration", "backups", "initializer", "cacheElements"})
 @XmlRootElement(name = "cache", namespace = "http://geode.apache.org/schema/cache")
 @XSDRootElement(namespace = "http://geode.apache.org/schema/cache",
@@ -296,6 +297,8 @@ public class CacheConfig {
   protected List<RegionAttributesType> regionAttributes;
   @XmlElement(name = "jndi-bindings", namespace = "http://geode.apache.org/schema/cache")
   protected JndiBindingsType jndiBindings;
+  @XmlElement(name = "registered-drivers", namespace = "http://geode.apache.org/schema/cache")
+  protected List<String> registeredDriverNames;
   @XmlElement(name = "region", namespace = "http://geode.apache.org/schema/cache")
   protected List<RegionConfig> regions;
   @XmlElement(name = "function-service", namespace = "http://geode.apache.org/schema/cache")
@@ -684,6 +687,36 @@ public class CacheConfig {
       jndiBindings = new JndiBindingsType();
     }
     return jndiBindings.getJndiBindings();
+  }
+
+  /**
+   * Gets the value of the registeredDriverNames property.
+   *
+   * <p>
+   * This accessor method returns a reference to the live list,
+   * not a snapshot. Therefore any modification you make to the
+   * returned list will be present inside the JAXB object.
+   * This is why there is not a <CODE>set</CODE> method for the backup property.
+   *
+   * <p>
+   * For example, to add a new item, do as follows:
+   *
+   * <pre>
+   * getRegisteredDriverNames().add(newItem);
+   * </pre>
+   *
+   *
+   * <p>
+   * Objects of the following type(s) are allowed in the list
+   * {@link String }
+   *
+   *
+   */
+  public List<String> getRegisteredDriverNames() {
+    if (jndiBindings == null) {
+      registeredDriverNames = new ArrayList<String>();
+    }
+    return registeredDriverNames;
   }
 
 
