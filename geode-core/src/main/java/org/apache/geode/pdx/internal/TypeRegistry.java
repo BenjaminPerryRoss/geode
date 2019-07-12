@@ -563,45 +563,49 @@ public class TypeRegistry {
   }
 
   public void removeType(int typeId) {
-    PdxType existingType = this.idToType.get(typeId);
-    if (existingType == null) {
-      throw new IllegalStateException("PDX type with id " + typeId + " was not found");
-    }
-
-    this.distributedTypeRegistry.removeType(typeId);
-    PdxType removedType = this.idToType.get(typeId);
+    PdxType typeToRemove = this.idToType.get(typeId);
     this.idToType.remove(typeId);
-    this.typeToId.remove(removedType);
+    if (typeToRemove != null) {
+      this.typeToId.remove(typeToRemove);
+      this.removeLocalType(typeToRemove);
+    }
+
+    PdxType existingType = this.typeMap().get(typeId);
+    if (existingType == null) {
+      throw new IllegalStateException(
+          "PDX type with id " + typeId + " was not found in the type registry.");
+    }
+    this.distributedTypeRegistry.removeType(typeId);
+
     if (logger.isInfoEnabled()) {
-      logger.info("Removed {}", removedType.toFormattedString());
+      logger.info("Removed {}", typeToRemove.toFormattedString());
     }
-
   }
 
-  public void removeType(PdxType type) {
-    if (false/* !this.typeMap().containsValue(type) */) {
-      throw new IllegalStateException("PDX type " + type + " was not found in TypeRegistry");
-    }
-    try {
-      this.distributedTypeRegistry.removeType(type);
-    } catch (Exception ex) {
-      throw new IllegalStateException(
-          "Exception " + ex + " while removing type from distributedTypeRegistry");
-    }
-    if (this.idToType.get(type) != null) {
-      int removedTypeId = this.typeToId.get(type);
-      this.idToType.remove(removedTypeId);
-      this.typeToId.remove(type);
-      removeLocalType(type);
-      if (logger.isInfoEnabled()) {
-        logger.info("Removed {}", type.toFormattedString());
-      }
-    } else {
-      throw new IllegalStateException(
-          "PDX type " + type + " was not found locally in TypeRegistry");
-    }
-
-  }
+  // public void removeType(PdxType type) {
+  // if (this.distributedTypeRegistry == null) {
+  // throw new IllegalStateException("Type registry was null");
+  // }
+  // try {
+  // this.distributedTypeRegistry.removeType(type);
+  // } catch (Exception ex) {
+  // // throw new IllegalStateException(
+  // // "Exception " + ex + " while removing type from distributedTypeRegistry");
+  // }
+  // if (this.idToType.get(type) != null) {
+  // int removedTypeId = this.typeToId.get(type);
+  // this.idToType.remove(removedTypeId);
+  // this.typeToId.remove(type);
+  // removeLocalType(type);
+  // if (logger.isInfoEnabled()) {
+  // logger.info("Removed {}", type.toFormattedString());
+  // }
+  // } else {
+  // throw new IllegalStateException(
+  // "PDX type " + type.getClassName() + " was not found locally in TypeRegistry");
+  // }
+  //
+  // }
 
   private void removeLocalType(PdxType type) {
     for (Object object : getLocalTypeIds().keySet()) {

@@ -379,11 +379,11 @@ public class PeerTypeRegistration implements TypeRegistration {
 
     lock();
     try {
-      PdxType unusedType = (PdxType) idToType.get(typeId);
+      PdxType typeToRemove = (PdxType) idToType.get(typeId);
 
-      updateRegion(typeId, unusedType, true);
+      typeToId.remove(typeToRemove);
 
-      typeToId.remove(unusedType);
+      updateRegion(typeId, typeToRemove, true);
 
     } finally {
       unlock();
@@ -396,7 +396,7 @@ public class PeerTypeRegistration implements TypeRegistration {
 
     lock();
     boolean error = false;
-    StringBuilder errorString = null;
+    StringBuilder errorString = new StringBuilder();
     int unusedTypeId = -1;
     try {
       if ((this.typeToId.get(type) == null && types().containsValue(type))
@@ -406,7 +406,8 @@ public class PeerTypeRegistration implements TypeRegistration {
       }
       if (this.typeToId.get(type) == null) {
         error = true;
-        errorString.append("Type " + type + " was not found locally in PeerTypeRegistration\n");
+        errorString.append(
+            "Type " + type.getClassName() + " was not found locally in PeerTypeRegistration\n");
       } else {
         // int unusedTypeId = getExistingIdForType(type);
         unusedTypeId = this.typeToId.get(type);
@@ -414,7 +415,8 @@ public class PeerTypeRegistration implements TypeRegistration {
       }
       if (!this.types().containsValue(type)) {
         error = true;
-        errorString.append("Type " + type + " was not found in PeerTypeRegistration\n");
+        errorString
+            .append("Type " + type.getClassName() + " was not found in PeerTypeRegistration\n");
       } else if (unusedTypeId != -1) {
         updateRegion(unusedTypeId, type, true);
       }
