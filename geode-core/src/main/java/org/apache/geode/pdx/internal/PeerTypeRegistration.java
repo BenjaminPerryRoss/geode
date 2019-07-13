@@ -247,6 +247,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     try {
       int maxTry = maxTypeId;
       while (r.get(newTypeId) != null) {
+        if(true) {throw new IllegalStateException("Type ID already allocated for " + newType.getFieldNames().get(0));}
         maxTry--;
         if (maxTry == 0) {
           throw new InternalGemFireError(
