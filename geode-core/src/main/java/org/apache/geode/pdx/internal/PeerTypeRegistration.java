@@ -169,7 +169,8 @@ public class PeerTypeRegistration implements TypeRegistration {
       public void beforeCreate(EntryEvent<Object, Object> event) throws CacheWriterException {
         Object newValue = event.getNewValue();
         if (newValue instanceof PdxType) {
-          logger.info("Adding new type: {}", ((PdxType) event.getNewValue()).toFormattedString());
+          // logger.info("Adding new type: {}", ((PdxType)
+          // event.getNewValue()).toFormattedString());
         } else {
           logger.info("Adding new type: {} {}", event.getKey(),
               ((EnumInfo) newValue).toFormattedString());
@@ -247,7 +248,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     try {
       int maxTry = maxTypeId;
       while (r.get(newTypeId) != null) {
-        if(true) {throw new IllegalStateException("Type ID already allocated for " + newType.getFieldNames().get(0));}
+        logger.info("PDXType id collision for Type id " + newTypeId);
         maxTry--;
         if (maxTry == 0) {
           throw new InternalGemFireError(

@@ -205,7 +205,7 @@ public class TypeRegistry {
       this.idToType.put(id, newType);
       this.typeToId.put(newType, id);
       if (logger.isInfoEnabled()) {
-        logger.info("Caching {}", newType.toFormattedString());
+        // logger.info("Caching {}", newType.toFormattedString());
       }
       return newType;
     } else {
