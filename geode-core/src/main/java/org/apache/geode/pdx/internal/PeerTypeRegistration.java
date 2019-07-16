@@ -77,6 +77,12 @@ public class PeerTypeRegistration implements TypeRegistration {
   private final Object dlsLock = new Object();
   private InternalCache cache;
 
+  private int collisions = 0;
+
+  public int collisions() {
+    return collisions;
+  }
+
   /**
    * The region where the PDX metadata is stored. Because this region is transactional for our
    * internal updates but we don't want to participate in the users transactions, all operations on
@@ -248,7 +254,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     try {
       int maxTry = maxTypeId;
       while (r.get(newTypeId) != null) {
-        logger.info("PDXType id collision for Type id " + newTypeId);
+        collisions++;
         maxTry--;
         if (maxTry == 0) {
           throw new InternalGemFireError(

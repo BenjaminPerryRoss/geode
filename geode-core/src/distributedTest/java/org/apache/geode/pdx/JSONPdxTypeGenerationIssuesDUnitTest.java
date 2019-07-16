@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.internal.logging.LogService;
+import org.apache.geode.pdx.internal.PeerTypeRegistration;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.MemberVM;
 import org.apache.geode.test.junit.rules.GfshCommandRule;
@@ -37,7 +38,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static final String END_JSON = "}";
   private static final boolean COLLISION_FORCED = false;
   private static final boolean USE_ONE_TYPE = false;
-  private static final int ENTRIES = 1000000;
+  private static final int ENTRIES = 100000;
 
   private MemberVM locator, server1, server2;
 
@@ -97,6 +98,15 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           startTime = System.currentTimeMillis();
         }
       }
+
+      elapsedTime = System.currentTimeMillis() - startTime;
+      LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms. \n" +
+          "Average time per put was " + elapsedTime / 10000 + "ms.");
+      PeerTypeRegistration registration = (PeerTypeRegistration) ClusterStartupRule.getCache()
+          .getPdxRegistry().getTypeRegistration();
+      int collisions = registration.collisions();
+      System.out.println("DEE Total collisions = " + collisions);
+
     });
   }
 
