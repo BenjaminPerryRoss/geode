@@ -77,11 +77,20 @@ public class PeerTypeRegistration implements TypeRegistration {
   private final Object dlsLock = new Object();
   private InternalCache cache;
 
+  // DEE
   private int collisions = 0;
 
   public int collisions() {
     return collisions;
   }
+
+  private int counter = 0;
+
+  public int getCounter() {
+    return counter;
+  }
+
+  private long totalGetExistingIdTime = 0;
 
   /**
    * The region where the PDX metadata is stored. Because this region is transactional for our
@@ -363,7 +372,19 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
     lock();
     try {
+      long getExistingIdStartTime = System.currentTimeMillis();
       int id = getExistingIdForType(newType);
+      long getExistingIdExecutionTime = System.currentTimeMillis() - getExistingIdStartTime;
+      totalGetExistingIdTime += getExistingIdExecutionTime;
+
+      if (counter % 10000 == 0 && counter != 0) {
+        logger.info("DEE Average time for getExistingIdForType was "
+            + totalGetExistingIdTime / 10000 + "ms.");
+        totalGetExistingIdTime = 0;
+      }
+      counter++;
+
+
       if (id != -1) {
         return id;
       }

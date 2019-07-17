@@ -14,8 +14,9 @@
  */
 package org.apache.geode.pdx;
 
-import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +24,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
+import org.apache.geode.internal.cache.InternalCache;
 import org.apache.geode.internal.logging.LogService;
 import org.apache.geode.pdx.internal.PeerTypeRegistration;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
@@ -34,7 +35,7 @@ import org.apache.geode.test.junit.rules.GfshCommandRule;
 public class JSONPdxTypeGenerationIssuesDUnitTest {
 
   private static final String REGION_NAME = "testRegion";
-  private static final String START_JSON = "{\"@type\": \"org.apache.geode.pdx.TestObject\",";
+  private static final String START_JSON = "{";
   private static final String END_JSON = "}";
   private static final boolean COLLISION_FORCED = false;
   private static final boolean USE_ONE_TYPE = false;
@@ -64,10 +65,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   public void detectPdxTypeIdCollision() {
 
     server1.invoke(() -> {
-
-      Cache cache = ClusterStartupRule.getCache();
-      assertThat(cache).isNotNull();
+      InternalCache cache = ClusterStartupRule.getCache();
       Region region = cache.getRegion(REGION_NAME);
+      PeerTypeRegistration registration =
+          (PeerTypeRegistration) cache.getPdxRegistry().getTypeRegistration();
 
       String field;
       String jsonString;
@@ -86,26 +87,30 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
         } else {
           field = "\"counter" + i + "\": " + i;
         }
+        String filePath =
+            "/Users/doevans/workspace/geode/geode-core/src/distributedTest/resources/org/apache/geode/pdx/jsonStrings/json4.txt";
+        String content = new String(Files.readAllBytes(Paths.get(filePath)));
 
-        jsonString = START_JSON + field + END_JSON;
+        jsonString = content.replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
+        // jsonString = START_JSON + field + END_JSON;
+
         instance = JSONFormatter.fromJSON(jsonString);
         region.put(i, instance);
 
         if (i % 10000 == 0 && i != 0) {
           elapsedTime = System.currentTimeMillis() - startTime;
-          LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms. \n" +
-              "Average time per put was " + elapsedTime / 10000 + "ms.");
+          LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms.\n" +
+              "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+              "DEE Total collisions so far = " + registration.collisions() + "\n" +
+              "i = " + i + ", counter = " + registration.getCounter());
           startTime = System.currentTimeMillis();
         }
       }
 
       elapsedTime = System.currentTimeMillis() - startTime;
       LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms. \n" +
-          "Average time per put was " + elapsedTime / 10000 + "ms.");
-      PeerTypeRegistration registration = (PeerTypeRegistration) ClusterStartupRule.getCache()
-          .getPdxRegistry().getTypeRegistration();
-      int collisions = registration.collisions();
-      System.out.println("DEE Total collisions = " + collisions);
+          "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+          "DEE Total collisions = " + registration.collisions());
 
     });
   }
