@@ -15,6 +15,10 @@
 package org.apache.geode.pdx;
 
 
+import static org.apache.geode.test.util.ResourceUtils.createTempFileFromResource;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -64,6 +68,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   @Test
   public void detectPdxTypeIdCollision() {
 
+    File source = loadTestResource("/org/apache/geode/pdx/jsonStrings/json4.txt");
+    assertThat(source.exists());
+    String filePath = source.getAbsolutePath();
+
     server1.invoke(() -> {
       InternalCache cache = ClusterStartupRule.getCache();
       Region region = cache.getRegion(REGION_NAME);
@@ -87,8 +95,8 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
         } else {
           field = "\"counter" + i + "\": " + i;
         }
-        String filePath =
-            "/Users/doevans/workspace/geode/geode-core/src/distributedTest/resources/org/apache/geode/pdx/jsonStrings/json4.txt";
+        // String filePath =
+        // "/org/apache/geode/pdx/jsonStrings/json4.txt";
         String content = new String(Files.readAllBytes(Paths.get(filePath)));
 
         jsonString = content.replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
@@ -113,6 +121,13 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           "DEE Total collisions = " + registration.collisions());
 
     });
+  }
+
+  private File loadTestResource(String fileName) {
+    String filePath = createTempFileFromResource(getClass(), fileName).getAbsolutePath();
+    assertThat(filePath).isNotNull();
+
+    return new File(filePath);
   }
 
   private static List<String> generateCollidingStrings(int numberOfStrings) {
