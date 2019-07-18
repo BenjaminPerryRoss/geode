@@ -15,12 +15,14 @@
 package org.apache.geode.pdx;
 
 
+import static org.apache.geode.test.util.ResourceUtils.createTempFileFromResource;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.Scanner;
 
 import org.jetbrains.annotations.NotNull;
@@ -45,7 +47,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static final boolean USE_COUNTER_IN_FIELDNAME = false;
   private static final boolean USE_RANDOM_JSON_FIELD_ORDER = true;
   private static final boolean USE_SINGLE_JSON_FIELD = false;
-  private static final String USE_SORTED_JSON_HELPER = "false";
+  private static final String USE_SORTED_JSON_HELPER = "true";
   private static final int ENTRIES = 100000;
 
   private MemberVM locator, server1, server2;
@@ -61,9 +63,13 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
     locator = cluster.startLocatorVM(0);
 
     server1 = cluster.startServerVM(1, locator.getPort());
-    server1.invoke(() -> {System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);});
+    server1.invoke(() -> {
+      System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);
+    });
     server2 = cluster.startServerVM(2, locator.getPort());
-    server2.invoke(() -> {System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);});
+    server2.invoke(() -> {
+      System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);
+    });
 
     gfsh.connectAndVerify(locator);
 
@@ -73,6 +79,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
 
   @Test
   public void detectPdxTypeIdCollision() {
+
+    File source = loadTestResource("/org/apache/geode/pdx/jsonStrings/json4.txt");
+    assertThat(source.exists());
+    String filePath = source.getAbsolutePath();
 
     server1.invoke(() -> {
       InternalCache cache = ClusterStartupRule.getCache();
@@ -90,8 +100,6 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
 
       List<String> jsonLines;
       if (!USE_SINGLE_JSON_FIELD) {
-        String filePath =
-            "/Users/doevans/workspace/geode/geode-core/src/distributedTest/resources/org/apache/geode/pdx/jsonStrings/json4.txt";
         jsonLines = getJSONLines(filePath);
       }
 
@@ -113,7 +121,8 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           if (USE_RANDOM_JSON_FIELD_ORDER) {
             Collections.shuffle(jsonLines.subList(6, 47));
           }
-          jsonString = buildJSONString(jsonLines).replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
+          jsonString = buildJSONString(jsonLines)
+              .replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
         }
 
         instance = JSONFormatter.fromJSON(jsonString);
@@ -124,7 +133,8 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           elapsedTime = System.currentTimeMillis() - startTime;
           LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
               "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
-              "Average time for getExistingIdForType() was " + registration.calculateGetExistingIdDuration() + "ms.\n" +
+              "Average time for getExistingIdForType() was "
+              + registration.calculateGetExistingIdDuration() + "ms.\n" +
               "Total collisions so far = " + registration.collisions() + "\n" +
               "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
           startTime = System.currentTimeMillis();
@@ -133,10 +143,11 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
 
       elapsedTime = System.currentTimeMillis() - startTime;
       LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
-              "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
-              "Average time for getExistingIdForType() was " + registration.calculateGetExistingIdDuration() + "ms.\n" +
-              "Total collisions so far = " + registration.collisions() + "\n" +
-              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+          "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+          "Average time for getExistingIdForType() was "
+          + registration.calculateGetExistingIdDuration() + "ms.\n" +
+          "Total collisions so far = " + registration.collisions() + "\n" +
+          "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
 
     });
   }
@@ -159,6 +170,13 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
       jsonString.append(line + "\n");
     }
     return jsonString.toString();
+  }
+
+  private File loadTestResource(String fileName) {
+    String filePath = createTempFileFromResource(getClass(), fileName).getAbsolutePath();
+    assertThat(filePath).isNotNull();
+
+    return new File(filePath);
   }
 
   private static List<String> generateCollidingStrings(int numberOfStrings) {

@@ -394,7 +394,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
   }
 
-  //DEE
+  // DEE
   public long calculateGetExistingIdDuration() {
     try {
       long result = totalGetExistingIdTime;
