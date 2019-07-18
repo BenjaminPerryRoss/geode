@@ -538,9 +538,9 @@ public class CacheServerLauncher {
     commandLine.add("server");
     addToServerCommand(commandLine, options);
 
-    //Hardcode memory parameters
-    //commandLine.add("-Xmx50m");
-    //commandLine.add("-Xms50m");
+    // Hardcode memory parameters
+    // commandLine.add("-Xmx50m");
+    // commandLine.add("-Xms50m");
 
     return commandLine.toArray(new String[commandLine.size()]);
   }
