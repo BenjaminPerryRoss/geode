@@ -43,12 +43,12 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static final String REGION_NAME = "testRegion";
   private static final String START_JSON = "{";
   private static final String END_JSON = "}";
-  private static final boolean COLLISION_FORCED = false;
-  private static final boolean USE_COUNTER_IN_FIELDNAME = false;
-  private static final boolean USE_RANDOM_JSON_FIELD_ORDER = true;
-  private static final boolean USE_SINGLE_JSON_FIELD = false;
-  private static final String USE_SORTED_JSON_HELPER = "true";
-  private static final int ENTRIES = 100000;
+  private static boolean COLLISION_FORCED = false;
+  private static boolean USE_COUNTER_IN_FIELDNAME = false;
+  private static boolean USE_RANDOM_JSON_FIELD_ORDER = true;
+  private static boolean USE_SINGLE_JSON_FIELD = false;
+  private static String USE_SORTED_JSON_HELPER = "true";
+  private static final int ENTRIES = 50000;
 
   private MemberVM locator, server1, server2;
 
@@ -93,12 +93,12 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
       String field;
       String jsonString;
       PdxInstance instance;
-      List<String> collidingStrings;
+      List<String> collidingStrings = null;
       if (COLLISION_FORCED) {
         collidingStrings = generateCollidingStrings(ENTRIES);
       }
 
-      List<String> jsonLines;
+      List<String> jsonLines = null;
       if (!USE_SINGLE_JSON_FIELD) {
         jsonLines = getJSONLines(filePath);
       }
