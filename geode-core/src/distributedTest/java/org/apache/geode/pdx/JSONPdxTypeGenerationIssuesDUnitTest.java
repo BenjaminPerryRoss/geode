@@ -15,11 +15,15 @@
 package org.apache.geode.pdx;
 
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
+import java.util.Scanner;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +42,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static final String START_JSON = "{";
   private static final String END_JSON = "}";
   private static final boolean COLLISION_FORCED = false;
-  private static final boolean USE_ONE_TYPE = false;
+  private static final boolean USE_COUNTER_IN_FIELDNAME = false;
+  private static final boolean USE_RANDOM_JSON_FIELD_ORDER = true;
+  private static final boolean USE_SINGLE_JSON_FIELD = false;
+  private static final String USE_SORTED_JSON_HELPER = "false";
   private static final int ENTRIES = 100000;
 
   private MemberVM locator, server1, server2;
@@ -52,8 +59,11 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   @Before
   public void before() throws Exception {
     locator = cluster.startLocatorVM(0);
+
     server1 = cluster.startServerVM(1, locator.getPort());
+    server1.invoke(() -> {System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);});
     server2 = cluster.startServerVM(2, locator.getPort());
+    server2.invoke(() -> {System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);});
 
     gfsh.connectAndVerify(locator);
 
@@ -73,8 +83,17 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
       String field;
       String jsonString;
       PdxInstance instance;
+      List<String> collidingStrings;
+      if (COLLISION_FORCED) {
+        collidingStrings = generateCollidingStrings(ENTRIES);
+      }
 
-      List<String> collidingStrings = generateCollidingStrings(ENTRIES);
+      List<String> jsonLines;
+      if (!USE_SINGLE_JSON_FIELD) {
+        String filePath =
+            "/Users/doevans/workspace/geode/geode-core/src/distributedTest/resources/org/apache/geode/pdx/jsonStrings/json4.txt";
+        jsonLines = getJSONLines(filePath);
+      }
 
       Long elapsedTime = 0L;
       Long startTime = System.currentTimeMillis();
@@ -82,37 +101,64 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
       for (int i = 0; i < ENTRIES; ++i) {
         if (COLLISION_FORCED) {
           field = "\"" + collidingStrings.get(i) + "\": " + i;
-        } else if (USE_ONE_TYPE) {
-          field = "\"counter\": " + i;
-        } else {
+        } else if (USE_COUNTER_IN_FIELDNAME) {
           field = "\"counter" + i + "\": " + i;
+        } else {
+          field = "\"counter\": " + i;
         }
-        String filePath =
-            "/Users/doevans/workspace/geode/geode-core/src/distributedTest/resources/org/apache/geode/pdx/jsonStrings/json4.txt";
-        String content = new String(Files.readAllBytes(Paths.get(filePath)));
 
-        jsonString = content.replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
-        // jsonString = START_JSON + field + END_JSON;
+        if (USE_SINGLE_JSON_FIELD || COLLISION_FORCED) {
+          jsonString = START_JSON + field + END_JSON;
+        } else {
+          if (USE_RANDOM_JSON_FIELD_ORDER) {
+            Collections.shuffle(jsonLines.subList(6, 47));
+          }
+          jsonString = buildJSONString(jsonLines).replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
+        }
 
         instance = JSONFormatter.fromJSON(jsonString);
+
         region.put(i, instance);
 
         if (i % 10000 == 0 && i != 0) {
           elapsedTime = System.currentTimeMillis() - startTime;
-          LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms.\n" +
+          LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
               "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
-              "DEE Total collisions so far = " + registration.collisions() + "\n" +
-              "i = " + i + ", counter = " + registration.getCounter());
+              "Average time for getExistingIdForType() was " + registration.calculateGetExistingIdDuration() + "ms.\n" +
+              "Total collisions so far = " + registration.collisions() + "\n" +
+              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
           startTime = System.currentTimeMillis();
         }
       }
 
       elapsedTime = System.currentTimeMillis() - startTime;
-      LogService.getLogger().info("Last 10000 puts took " + elapsedTime + " ms. \n" +
-          "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
-          "DEE Total collisions = " + registration.collisions());
+      LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
+              "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+              "Average time for getExistingIdForType() was " + registration.calculateGetExistingIdDuration() + "ms.\n" +
+              "Total collisions so far = " + registration.collisions() + "\n" +
+              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
 
     });
+  }
+
+  @NotNull
+  private static List<String> getJSONLines(String filePath) throws FileNotFoundException {
+    Scanner scanner = new Scanner(new File(filePath));
+    List<String> jsonLines = new ArrayList<>();
+    while (scanner.hasNext()) {
+      jsonLines.add(scanner.nextLine());
+    }
+    return jsonLines;
+  }
+
+  @NotNull
+  private static String buildJSONString(List<String> jsonLines) {
+    StringBuilder jsonString = new StringBuilder();
+    for (int i = 0; i < jsonLines.size(); ++i) {
+      String line = jsonLines.get(i);
+      jsonString.append(line + "\n");
+    }
+    return jsonString.toString();
   }
 
   private static List<String> generateCollidingStrings(int numberOfStrings) {

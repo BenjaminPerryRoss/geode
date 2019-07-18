@@ -374,16 +374,8 @@ public class PeerTypeRegistration implements TypeRegistration {
     try {
       long getExistingIdStartTime = System.currentTimeMillis();
       int id = getExistingIdForType(newType);
-      long getExistingIdExecutionTime = System.currentTimeMillis() - getExistingIdStartTime;
-      totalGetExistingIdTime += getExistingIdExecutionTime;
-
-      if (counter % 10000 == 0 && counter != 0) {
-        logger.info("DEE Average time for getExistingIdForType was "
-            + totalGetExistingIdTime / 10000 + "ms.");
-        totalGetExistingIdTime = 0;
-      }
+      totalGetExistingIdTime += (System.currentTimeMillis() - getExistingIdStartTime);
       counter++;
-
 
       if (id != -1) {
         return id;
@@ -399,6 +391,21 @@ public class PeerTypeRegistration implements TypeRegistration {
       return newType.getTypeId();
     } finally {
       unlock();
+    }
+  }
+
+  //DEE
+  public long calculateGetExistingIdDuration() {
+    try {
+      long result = totalGetExistingIdTime;
+      if (counter != 0) {
+        result = totalGetExistingIdTime / counter;
+      }
+      return result;
+
+    } finally {
+      totalGetExistingIdTime = 0;
+      counter = 0;
     }
   }
 
