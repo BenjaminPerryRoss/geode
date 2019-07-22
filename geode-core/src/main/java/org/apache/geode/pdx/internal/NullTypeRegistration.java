@@ -121,4 +121,14 @@ public class NullTypeRegistration implements TypeRegistration {
   public int getLocalSize() {
     return 0;
   }
+
+  @Override
+  public void removeType(int typeId) {
+
+  }
+
+  @Override
+  public void removeType(PdxType type) {
+
+  }
 }

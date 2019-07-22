@@ -93,4 +93,8 @@ public interface TypeRegistration {
    * Return the size of the type registry in this member.
    */
   int getLocalSize();
+
+  void removeType(int typeId);
+
+  void removeType(PdxType type);
 }

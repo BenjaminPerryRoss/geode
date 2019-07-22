@@ -77,6 +77,21 @@ public class PeerTypeRegistration implements TypeRegistration {
   private final Object dlsLock = new Object();
   private InternalCache cache;
 
+  // DEE
+  private int collisions = 0;
+
+  public int collisions() {
+    return collisions;
+  }
+
+  private int counter = 0;
+
+  public int getCounter() {
+    return counter;
+  }
+
+  private long totalGetExistingIdTime = 0;
+
   /**
    * The region where the PDX metadata is stored. Because this region is transactional for our
    * internal updates but we don't want to participate in the users transactions, all operations on
@@ -169,7 +184,8 @@ public class PeerTypeRegistration implements TypeRegistration {
       public void beforeCreate(EntryEvent<Object, Object> event) throws CacheWriterException {
         Object newValue = event.getNewValue();
         if (newValue instanceof PdxType) {
-          logger.info("Adding new type: {}", ((PdxType) event.getNewValue()).toFormattedString());
+          // logger.info("Adding new type: {}", ((PdxType)
+          // event.getNewValue()).toFormattedString());
         } else {
           logger.info("Adding new type: {} {}", event.getKey(),
               ((EnumInfo) newValue).toFormattedString());
@@ -247,6 +263,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     try {
       int maxTry = maxTypeId;
       while (r.get(newTypeId) != null) {
+        collisions++;
         maxTry--;
         if (maxTry == 0) {
           throw new InternalGemFireError(
@@ -355,7 +372,11 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
     lock();
     try {
+      long getExistingIdStartTime = System.currentTimeMillis();
       int id = getExistingIdForType(newType);
+      totalGetExistingIdTime += (System.currentTimeMillis() - getExistingIdStartTime);
+      counter++;
+
       if (id != -1) {
         return id;
       }
@@ -373,15 +394,89 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
   }
 
+  // DEE
+  public long calculateGetExistingIdDuration() {
+    try {
+      long result = totalGetExistingIdTime;
+      if (counter != 0) {
+        result = totalGetExistingIdTime / counter;
+      }
+      return result;
+
+    } finally {
+      totalGetExistingIdTime = 0;
+      counter = 0;
+    }
+  }
+
+  @Override
+  public void removeType(int typeId) {
+    verifyConfiguration();
+
+    lock();
+    try {
+      PdxType typeToRemove = (PdxType) idToType.get(typeId);
+
+      typeToId.remove(typeToRemove);
+
+      updateRegion(typeId, typeToRemove, true);
+
+    } finally {
+      unlock();
+    }
+  }
+
+  @Override
+  public void removeType(PdxType type) {
+    verifyConfiguration();
+
+    lock();
+    boolean error = false;
+    StringBuilder errorString = new StringBuilder();
+    int unusedTypeId = -1;
+    try {
+      if ((this.typeToId.get(type) == null && types().containsValue(type))
+          || (this.typeToId.get(type) != null && !types().containsValue(type))) {
+        error = true;
+        errorString.append("Disagreement between idToType and typeToId \n");
+      }
+      if (this.typeToId.get(type) == null) {
+        error = true;
+        errorString.append(
+            "Type " + type.getClassName() + " was not found locally in PeerTypeRegistration\n");
+      } else {
+        // int unusedTypeId = getExistingIdForType(type);
+        unusedTypeId = this.typeToId.get(type);
+        typeToId.remove(type);
+      }
+      if (!this.types().containsValue(type)) {
+        error = true;
+        errorString
+            .append("Type " + type.getClassName() + " was not found in PeerTypeRegistration\n");
+      } else if (unusedTypeId != -1) {
+        updateRegion(unusedTypeId, type, true);
+      }
+      if (error) {
+        throw new IllegalStateException(errorString.toString());
+      }
+    } finally {
+      unlock();
+    }
+  }
+
   private void updateIdToTypeRegion(PdxType newType) {
-    updateRegion(newType.getTypeId(), newType);
+    updateRegion(newType.getTypeId(), newType, false);
+  }
+
+  private void updateIdToTypeRegion(PdxType newType, boolean destroy) {
+    updateRegion(newType.getTypeId(), newType, destroy);
   }
 
   private void updateIdToEnumRegion(EnumId id, EnumInfo ei) {
-    updateRegion(id, ei);
+    updateRegion(id, ei, false);
   }
 
-  private void updateRegion(Object k, Object v) {
+  private void updateRegion(Object k, Object v, boolean destroy) {
     Region<Object, Object> r = getIdToType();
     InternalCache cache = (InternalCache) r.getRegionService();
 
@@ -399,7 +494,11 @@ public class PeerTypeRegistration implements TypeRegistration {
       while (true) {
         txManager.begin();
         try {
-          r.put(k, v);
+          if (destroy) {
+            r.destroy(k);
+          } else {
+            r.put(k, v);
+          }
           txManager.commit();
           return;
         } catch (TransactionException e) {
