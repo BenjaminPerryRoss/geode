@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
+import org.apache.geode.cache.RegionShortcut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Rule;
@@ -48,7 +49,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static boolean USE_RANDOM_JSON_FIELD_ORDER = true;
   private static boolean USE_SINGLE_JSON_FIELD = false;
   private static String USE_SORTED_JSON_HELPER = "true";
-  private static final int ENTRIES = 50000;
+  private static final int ENTRIES = 10000;
 
   private MemberVM locator, server1, server2;
 
@@ -64,6 +65,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
 
     server1 = cluster.startServerVM(1, locator.getPort());
     server1.invoke(() -> {
+      ClusterStartupRule.getCache().createRegionFactory(RegionShortcut.REPLICATE).create(REGION_NAME);
       System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);
     });
     server2 = cluster.startServerVM(2, locator.getPort());
@@ -71,10 +73,11 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
       System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);
     });
 
-    gfsh.connectAndVerify(locator);
-
-    gfsh.executeAndAssertThat("create region --type=REPLICATE --name=" + REGION_NAME)
-        .statusIsSuccess();
+//
+//    gfsh.connectAndVerify(locator);
+//
+//    gfsh.executeAndAssertThat("create region --type=REPLICATE --name=" + REGION_NAME)
+//        .statusIsSuccess();
   }
 
   @Test
