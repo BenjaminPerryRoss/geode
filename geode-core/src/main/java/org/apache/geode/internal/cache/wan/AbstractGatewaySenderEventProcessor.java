@@ -781,6 +781,7 @@ public abstract class AbstractGatewaySenderEventProcessor extends LoggingThread
       for (GatewaySenderEventImpl gsEvent : events) {
         // Determine whether the event should be conflated.
         if (gsEvent.shouldBeConflated()) {
+          logger.info("JASON conflating");
           // The event should be conflated. Create the conflation key
           // (comprised of the event's region, key and the operation).
           ConflationKey key = new ConflationKey(gsEvent.getRegion().getFullPath(),

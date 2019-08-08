@@ -1005,6 +1005,17 @@ public class PartitionedRegion extends LocalRegion
     // IMPORTANT: do this before advising peers that we have this region
     registerPartitionedRegion(storesData);
 
+    if (this.getName().contains("childRegion")) {
+      LogService.getLogger().info("Child Region name: " + this.getName());
+      LogService.getLogger().info("JASON sleeping for child region");
+      try {
+        Thread.sleep(3000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+
     getRegionAdvisor().initializeRegionAdvisor(); // must be BEFORE initializeRegion call
     getRegionAdvisor().addMembershipListener(this.advisorListener); // fix for bug 38719
 
