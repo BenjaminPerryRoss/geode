@@ -24,8 +24,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.geode.cache.RegionShortcut;
+import org.apache.geode.test.dunit.AsyncInvocation;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Rule;
@@ -45,19 +49,16 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
   private static final String START_JSON = "{";
   private static final String END_JSON = "}";
   private static boolean COLLISION_FORCED = false;
-  private static boolean USE_COUNTER_IN_FIELDNAME = false;
-  private static boolean USE_RANDOM_JSON_FIELD_ORDER = true;
-  private static boolean USE_SINGLE_JSON_FIELD = false;
+  private static boolean USE_COUNTER_IN_FIELDNAME = true;
+  private static boolean USE_RANDOM_JSON_FIELD_ORDER = false;
+  private static boolean USE_SINGLE_JSON_FIELD = true;
   private static String USE_SORTED_JSON_HELPER = "true";
-  private static final int ENTRIES = 10000;
+  private static final int ENTRIES = 25000;
 
   private MemberVM locator, server1, server2;
 
   @Rule
   public ClusterStartupRule cluster = new ClusterStartupRule();
-
-  @Rule
-  public GfshCommandRule gfsh = new GfshCommandRule();
 
   @Before
   public void before() throws Exception {
@@ -72,12 +73,6 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
     server2.invoke(() -> {
       System.setProperty(JSONFormatter.SORT_JSON_FIELD_NAMES_PROPERTY, USE_SORTED_JSON_HELPER);
     });
-
-//
-//    gfsh.connectAndVerify(locator);
-//
-//    gfsh.executeAndAssertThat("create region --type=REPLICATE --name=" + REGION_NAME)
-//        .statusIsSuccess();
   }
 
   @Test
@@ -87,9 +82,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
     assertThat(source.exists());
     String filePath = source.getAbsolutePath();
 
-    server1.invoke(() -> {
+    AsyncInvocation asyncOne = server1.invokeAsync(() -> {
       InternalCache cache = ClusterStartupRule.getCache();
       Region region = cache.getRegion(REGION_NAME);
+      String memberName = cache.getDistributedSystem().getDistributedMember().getName();
       PeerTypeRegistration registration =
           (PeerTypeRegistration) cache.getPdxRegistry().getTypeRegistration();
 
@@ -106,16 +102,16 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
         jsonLines = getJSONLines(filePath);
       }
 
-      Long elapsedTime = 0L;
-      Long startTime = System.currentTimeMillis();
+      float elapsedTime;
+      long startTime = System.currentTimeMillis();
 
       for (int i = 0; i < ENTRIES; ++i) {
         if (COLLISION_FORCED) {
           field = "\"" + collidingStrings.get(i) + "\": " + i;
         } else if (USE_COUNTER_IN_FIELDNAME) {
-          field = "\"counter" + i + "\": " + i;
+          field = "\"counter" + memberName + i + "\": " + i;
         } else {
-          field = "\"counter\": " + i;
+          field = "\"counter" + memberName + "\": " + i;
         }
 
         if (USE_SINGLE_JSON_FIELD || COLLISION_FORCED) {
@@ -130,9 +126,10 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
 
         instance = JSONFormatter.fromJSON(jsonString);
 
-        region.put(i, instance);
+//        region.put(i, instance);
+        long regionSize = cache.getPdxRegistry().typeMap().size();
 
-        if (i % 10000 == 0 && i != 0) {
+        if (regionSize % 10000 < 2 && i != 0) {
           elapsedTime = System.currentTimeMillis() - startTime;
           LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
               "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
@@ -153,6 +150,83 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
 
     });
+
+
+    AsyncInvocation asyncTwo = server2.invokeAsync(() -> {
+      InternalCache cache = ClusterStartupRule.getCache();
+      Region region = cache.getRegion(REGION_NAME);
+      String memberName = cache.getDistributedSystem().getDistributedMember().getName();
+              PeerTypeRegistration registration =
+              (PeerTypeRegistration) cache.getPdxRegistry().getTypeRegistration();
+
+      String field;
+      String jsonString;
+      PdxInstance instance;
+      List<String> collidingStrings = null;
+      if (COLLISION_FORCED) {
+        collidingStrings = generateCollidingStrings(ENTRIES);
+      }
+
+      List<String> jsonLines = null;
+      if (!USE_SINGLE_JSON_FIELD) {
+        jsonLines = getJSONLines(filePath);
+      }
+
+      float elapsedTime;
+      long startTime = System.currentTimeMillis();
+
+      for (int i = 0; i < ENTRIES; ++i) {
+        if (COLLISION_FORCED) {
+          field = "\"" + collidingStrings.get(i) + "\": " + i;
+        } else if (USE_COUNTER_IN_FIELDNAME) {
+          field = "\"counter" + memberName + i + "\": " + i;
+        } else {
+          field = "\"counter" + memberName + "\": " + i;
+        }
+
+        if (USE_SINGLE_JSON_FIELD || COLLISION_FORCED) {
+          jsonString = START_JSON + field + END_JSON;
+        } else {
+          if (USE_RANDOM_JSON_FIELD_ORDER) {
+            Collections.shuffle(jsonLines.subList(6, 47));
+          }
+          jsonString = buildJSONString(jsonLines)
+                  .replace("\"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"", field);
+        }
+
+        instance = JSONFormatter.fromJSON(jsonString);
+
+//        region.put(i, instance);
+        long regionSize = cache.getPdxRegistry().typeMap().size();
+
+        if (regionSize % 10000 < 2 && i != 0) {
+          elapsedTime = System.currentTimeMillis() - startTime;
+          LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
+                  "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+                  "Average time for getExistingIdForType() was "
+                  + registration.calculateGetExistingIdDuration() + "ms.\n" +
+                  "Total collisions so far = " + registration.collisions() + "\n" +
+                  "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+          startTime = System.currentTimeMillis();
+        }
+      }
+
+      elapsedTime = System.currentTimeMillis() - startTime;
+      LogService.getLogger().info("Last 10000 puts took " + elapsedTime + "ms.\n" +
+              "Average time per put was " + elapsedTime / 10000 + "ms.\n" +
+              "Average time for getExistingIdForType() was "
+              + registration.calculateGetExistingIdDuration() + "ms.\n" +
+              "Total collisions so far = " + registration.collisions() + "\n" +
+              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+
+    });
+    try {
+      asyncOne.get(60, TimeUnit.MINUTES);
+      asyncTwo.get(60, TimeUnit.MINUTES);
+    } catch (ExecutionException | InterruptedException | TimeoutException ex) {
+      ex.printStackTrace();
+    }
+
   }
 
   @NotNull

@@ -90,7 +90,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     return counter;
   }
 
-  private long totalGetExistingIdTime = 0;
+  private float totalGetExistingIdTime = 0;
 
   /**
    * The region where the PDX metadata is stored. Because this region is transactional for our
@@ -172,9 +172,13 @@ public class PeerTypeRegistration implements TypeRegistration {
         verifyConfiguration();
         // update a local map with the pdxtypes registered
         Object value = event.getNewValue();
-        if (value instanceof PdxType) {
-          updateClassToTypeMap((PdxType) value);
-        }
+        Object key = event.getKey();
+//        if (value instanceof PdxType) {
+//          updateClassToTypeMap((PdxType) value);
+//        }
+        if (value != null) {
+          updateLocalMaps(key, value);
+      }
       }
     });
 
@@ -372,16 +376,21 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
     lock();
     try {
-      long getExistingIdStartTime = System.currentTimeMillis();
-      int id = getExistingIdForType(newType);
-      totalGetExistingIdTime += (System.currentTimeMillis() - getExistingIdStartTime);
-      counter++;
-
-      if (id != -1) {
-        return id;
+      if (existingId != null) {
+        return existingId;
       }
+//      long getExistingIdStartTime = System.currentTimeMillis();
+//      int id = getExistingIdForType(newType);
+//      totalGetExistingIdTime += (System.currentTimeMillis() - getExistingIdStartTime);
+//      counter++;
+//
+//      if (id != -1) {
+//        return id;
+//      }
+//
+//      id = allocateTypeId(newType);
 
-      id = allocateTypeId(newType);
+      int id = allocateTypeId(newType);
       newType.setTypeId(id);
 
       updateIdToTypeRegion(newType);
@@ -395,14 +404,9 @@ public class PeerTypeRegistration implements TypeRegistration {
   }
 
   // DEE
-  public long calculateGetExistingIdDuration() {
+  public float calculateGetExistingIdDuration() {
     try {
-      long result = totalGetExistingIdTime;
-      if (counter != 0) {
-        result = totalGetExistingIdTime / counter;
-      }
-      return result;
-
+      return totalGetExistingIdTime / counter;
     } finally {
       totalGetExistingIdTime = 0;
       counter = 0;
@@ -849,6 +853,27 @@ public class PeerTypeRegistration implements TypeRegistration {
         pdxTypeSet.add(type);
         classToType.put(type.getClassName(), pdxTypeSet);
       }
+    }
+  }
+
+  private void updateLocalMaps(Object key, Object value) {
+    if (value instanceof PdxType) {
+      PdxType type = (PdxType) value;
+      typeToId.put(type, (Integer) key);
+      synchronized (this.classToType) {
+        if (type.getClassName().equals(JSONFormatter.JSON_CLASSNAME)) {
+          return; // no need to include here
+        }
+        CopyOnWriteHashSet<PdxType> pdxTypeSet = this.classToType.get(type.getClassName());
+        if (pdxTypeSet == null) {
+          pdxTypeSet = new CopyOnWriteHashSet<PdxType>();
+        }
+        pdxTypeSet.add(type);
+        classToType.put(type.getClassName(), pdxTypeSet);
+      }
+    } else if (value instanceof EnumInfo) {
+      EnumInfo info = (EnumInfo) value;
+      enumToId.put(info, (EnumId) key);
     }
   }
 
