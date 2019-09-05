@@ -127,7 +127,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
         instance = JSONFormatter.fromJSON(jsonString);
 
 //        region.put(i, instance);
-        long regionSize = cache.getPdxRegistry().typeMap().size();
+        long regionSize = registration.getLocalSize();
 
         if (regionSize % 10000 < 2 && i != 0) {
           elapsedTime = System.currentTimeMillis() - startTime;
@@ -136,7 +136,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
               "Average time for getExistingIdForType() was "
               + registration.calculateGetExistingIdDuration() + "ms.\n" +
               "Total collisions so far = " + registration.collisions() + "\n" +
-              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+              "Number of PDXTypes = " + registration.getLocalSize());
           startTime = System.currentTimeMillis();
         }
       }
@@ -147,7 +147,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
           "Average time for getExistingIdForType() was "
           + registration.calculateGetExistingIdDuration() + "ms.\n" +
           "Total collisions so far = " + registration.collisions() + "\n" +
-          "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+          "Number of PDXTypes = " + registration.getLocalSize());
 
     });
 
@@ -197,7 +197,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
         instance = JSONFormatter.fromJSON(jsonString);
 
 //        region.put(i, instance);
-        long regionSize = cache.getPdxRegistry().typeMap().size();
+        long regionSize = cache.getPdxRegistry().getTypeRegistration().getLocalSize();
 
         if (regionSize % 10000 < 2 && i != 0) {
           elapsedTime = System.currentTimeMillis() - startTime;
@@ -206,7 +206,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
                   "Average time for getExistingIdForType() was "
                   + registration.calculateGetExistingIdDuration() + "ms.\n" +
                   "Total collisions so far = " + registration.collisions() + "\n" +
-                  "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+                  "Number of PDXTypes = " + cache.getPdxRegistry().getTypeRegistration().getLocalSize());
           startTime = System.currentTimeMillis();
         }
       }
@@ -217,7 +217,7 @@ public class JSONPdxTypeGenerationIssuesDUnitTest {
               "Average time for getExistingIdForType() was "
               + registration.calculateGetExistingIdDuration() + "ms.\n" +
               "Total collisions so far = " + registration.collisions() + "\n" +
-              "Number of PDXTypes = " + cache.getPdxRegistry().typeMap().size());
+              "Number of PDXTypes = " + cache.getPdxRegistry().getTypeRegistration().getLocalSize());
 
     });
     try {

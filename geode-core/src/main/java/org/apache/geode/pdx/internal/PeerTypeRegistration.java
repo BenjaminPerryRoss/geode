@@ -376,6 +376,7 @@ public class PeerTypeRegistration implements TypeRegistration {
     }
     lock();
     try {
+      existingId = typeToId.get(newType);
       if (existingId != null) {
         return existingId;
       }

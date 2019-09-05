@@ -191,30 +191,30 @@ public class TypeRegistry {
    * @return the existing type or the new type
    */
   public PdxType defineType(PdxType newType) {
-    Integer existingId = this.typeToId.get(newType);
-    if (existingId != null) {
-      PdxType existingType = this.idToType.get(existingId);
-      if (existingType != null) {
-        return existingType;
-      }
-    }
+//    Integer existingId = this.typeToId.get(newType);
+//    if (existingId != null) {
+//      PdxType existingType = this.idToType.get(existingId);
+//      if (existingType != null) {
+//        return existingType;
+//      }
+//    }
     int id = this.distributedTypeRegistry.defineType(newType);
-    PdxType oldType = this.idToType.get(id);
-    if (oldType == null) {
-      newType.setTypeId(id);
-      this.idToType.put(id, newType);
-      this.typeToId.put(newType, id);
-      if (logger.isInfoEnabled()) {
-        // logger.info("Caching {}", newType.toFormattedString());
-      }
+//    PdxType oldType = this.idToType.get(id);
+//    if (oldType == null) {
+//      newType.setTypeId(id);
+//      this.idToType.put(id, newType);
+//      this.typeToId.put(newType, id);
+//      if (logger.isInfoEnabled()) {
+//        // logger.info("Caching {}", newType.toFormattedString());
+//      }
       return newType;
-    } else {
-      if (!oldType.equals(newType)) {
-        Assert.fail("Old type does not equal new type for the same id. oldType=" + oldType
-            + " new type=" + newType);
-      }
-      return oldType;
-    }
+//    } else {
+//      if (!oldType.equals(newType)) {
+//        Assert.fail("Old type does not equal new type for the same id. oldType=" + oldType
+//            + " new type=" + newType);
+//      }
+//      return oldType;
+//    }
   }
 
   public void addRemoteType(int typeId, PdxType newType) {
