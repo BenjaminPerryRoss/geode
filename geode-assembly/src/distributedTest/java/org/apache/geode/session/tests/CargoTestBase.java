@@ -261,7 +261,6 @@ public abstract class CargoTestBase {
 
       verifyMaxInactiveInterval(63);
     }
-
   }
 
   protected void verifyMaxInactiveInterval(int expected) throws IOException, URISyntaxException {

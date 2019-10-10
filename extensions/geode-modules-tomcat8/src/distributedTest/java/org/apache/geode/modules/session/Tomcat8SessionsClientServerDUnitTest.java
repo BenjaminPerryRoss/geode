@@ -35,6 +35,8 @@ import org.apache.geode.modules.session.catalina.ClientServerCacheLifecycleListe
 import org.apache.geode.modules.session.catalina.DeltaSessionManager;
 import org.apache.geode.modules.session.catalina.Tomcat8DeltaSessionManager;
 import org.apache.geode.test.dunit.VM;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
 import org.apache.geode.test.junit.categories.SessionTest;
 
 @Category(SessionTest.class)
@@ -43,24 +45,26 @@ public class Tomcat8SessionsClientServerDUnitTest extends TestSessionsTomcat8Bas
 
   @Before
   public void setUp() throws Exception {
-    vm0 = VM.getVM(1);
-    String hostName = vm0.getHost().getHostName();
-    int cacheServerPort = vm0.invoke(() -> {
-      Properties props = new Properties();
-      CacheFactory cf = new CacheFactory(props);
-      Cache cache = cf.create();
-      CacheServer server = cache.addCacheServer();
-      server.setPort(0);
-      server.start();
-
-      return server.getPort();
-    });
+//    vm0 = VM.getVM(1);
+//    String hostName = vm0.getHost().getHostName();
+//    int cacheServerPort = vm0.invoke(() -> {
+//      Properties props = new Properties();
+//      CacheFactory cf = new CacheFactory(props);
+//      Cache cache = cf.create();
+//      CacheServer server = cache.addCacheServer();
+//      server.setPort(0);
+//      server.start();
+//
+//      return server.getPort();
+//    });
+    MemberVM locator = cluster.startLocatorVM(0, 0);
+    MemberVM cacheServer = cluster.startServerVM(1, locator.getPort());
 
     port = SocketUtils.findAvailableTcpPort();
     server = new EmbeddedTomcat8(port, "JVM-1");
 
     ClientCacheFactory cacheFactory = new ClientCacheFactory();
-    cacheFactory.addPoolServer(hostName, cacheServerPort);
+    cacheFactory.addPoolServer("localhost", cacheServer.getPort()).setPoolSubscriptionEnabled(true);
     clientCache = cacheFactory.create();
     DeltaSessionManager manager = new Tomcat8DeltaSessionManager();
 
@@ -70,6 +74,7 @@ public class Tomcat8SessionsClientServerDUnitTest extends TestSessionsTomcat8Bas
     server.addLifecycleListener(listener);
     sessionManager = manager;
     sessionManager.setEnableCommitValve(true);
+    sessionManager.setEnableLocalCache(false);
     server.getRootContext().setManager(sessionManager);
     AuthConfigFactory.setFactory(null);
 
@@ -84,7 +89,7 @@ public class Tomcat8SessionsClientServerDUnitTest extends TestSessionsTomcat8Bas
 
   @After
   public void tearDown() {
-    vm0.invoke(() -> CacheFactory.getAnyInstance().getCacheServers().forEach(CacheServer::stop));
+    //vm0.invoke(() -> CacheFactory.getAnyInstance().getCacheServers().forEach(CacheServer::stop));
 
     clientCache.close();
     server.stopContainer();

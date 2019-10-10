@@ -35,6 +35,7 @@ import org.apache.geode.cache.Region;
 import org.apache.geode.modules.session.catalina.DeltaSessionManager;
 import org.apache.geode.test.dunit.VM;
 import org.apache.geode.test.dunit.rules.CacheRule;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.DistributedRule;
 
 public abstract class TestSessionsTomcat8Base implements Serializable {
@@ -43,7 +44,7 @@ public abstract class TestSessionsTomcat8Base implements Serializable {
   public static DistributedRule distributedTestRule = new DistributedRule();
 
   @Rule
-  public CacheRule cacheRule = new CacheRule();
+  public ClusterStartupRule cluster = new ClusterStartupRule(2);
 
   VM vm0;
   int port;
