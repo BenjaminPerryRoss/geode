@@ -26,6 +26,7 @@ import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SER
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__FORCE;
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__HOSTNAME__FOR__CLIENTS;
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__LOCATORS;
+import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__LOCATOR_WAIT_TIME;
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__MAXHEAP;
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__NAME;
 import static org.apache.geode.management.internal.cli.i18n.CliStrings.START_SERVER__OFF_HEAP_MEMORY_SIZE;
@@ -123,6 +124,21 @@ public class StartServerCommandDUnitTest implements Serializable {
   public static void afterClass() throws Exception {
     gfsh.connectAndVerify(locator);
     gfsh.execute("shutdown --include-locators");
+  }
+
+  @Test
+  public void testLocatorWithMissingLocator() {
+    cluster.stop(0);
+
+    String command = new CommandStringBuilder(START_SERVER)
+        .addOption(START_SERVER__NAME, memberName)
+        .addOption(START_SERVER__LOCATORS, locatorConnectionString)
+        .addOption(START_SERVER__LOCATOR_WAIT_TIME, String.valueOf(-1))
+        .getCommandString();
+
+    gfsh.executeAndAssertThat(command).statusIsError();
+
+    locator = cluster.startLocatorVM(0, 0);
   }
 
   @Test

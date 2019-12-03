@@ -361,7 +361,7 @@ public class GMSJoinLeave implements JoinLeave {
         } else {
           long now = System.currentTimeMillis();
           if (state.locatorsContacted <= 0) {
-            if (now > locatorGiveUpTime) {
+            if (locatorWaitTime != -1 && now > locatorGiveUpTime) {
               // break out of the loop and return false
               break;
             }
