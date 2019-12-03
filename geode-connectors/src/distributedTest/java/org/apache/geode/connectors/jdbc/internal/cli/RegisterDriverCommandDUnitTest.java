@@ -77,6 +77,41 @@ public class RegisterDriverCommandDUnitTest {
         .containsOutput(JDBC_DRIVER_CLASS_NAME);
   }
 
+  @Test
+  public void testRegisterDriverPersistsThroughRestart() {
+    // aquire the jar to be used
+    final String jdbcJarName = "mysql-connector-java-8.0.15.jar";
+    File mySqlDriverFile = loadTestResource("/" + jdbcJarName);
+    assertThat(mySqlDriverFile).exists();
+    String jarFile = mySqlDriverFile.getAbsolutePath();
+
+    gfsh.executeAndAssertThat("deploy --jar=" + jarFile).statusIsSuccess();
+
+    System.out.println("BR: First List");
+
+    gfsh.executeAndAssertThat("list drivers").statusIsSuccess()
+        .doesNotContainOutput(JDBC_DRIVER_CLASS_NAME);
+
+    gfsh.executeAndAssertThat("register driver --driver-class=" + JDBC_DRIVER_CLASS_NAME)
+        .statusIsSuccess();
+
+    System.out.println("BR: Second List");
+
+    gfsh.executeAndAssertThat("list drivers").statusIsSuccess()
+        .containsOutput(JDBC_DRIVER_CLASS_NAME);
+
+    cluster.stop(1);
+    server1 = cluster.startServerVM(1, "group1", locator.getPort());
+
+    cluster.stop(2);
+    server2 = cluster.startServerVM(2, "group1", locator.getPort());
+
+    System.out.println("BR: FINAL LIST");
+
+    gfsh.executeAndAssertThat("list drivers").statusIsSuccess()
+        .containsOutput(JDBC_DRIVER_CLASS_NAME);
+  }
+
   private File loadTestResource(String fileName) {
     String filePath = TestUtil.getResourcePath(this.getClass(), fileName);
     Assertions.assertThat(filePath).isNotNull();
