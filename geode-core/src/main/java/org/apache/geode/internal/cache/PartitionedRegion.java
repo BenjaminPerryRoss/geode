@@ -2144,18 +2144,24 @@ public class PartitionedRegion extends LocalRegion
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * @since GemFire 5.0
-   * @throws UnsupportedOperationException OVERRIDES
-   */
-  @Override
-  public void clear() {
-    throw new UnsupportedOperationException();
-  }
+//  /**
+////   * @since GemFire 5.0
+////   * @throws UnsupportedOperationException OVERRIDES
+////   */
+////  @Override
+////  public void clear() {
+////    throw new UnsupportedOperationException();
+////  }
 
   @Override
   void basicClear(RegionEventImpl regionEvent, boolean cacheWrite) {
-    throw new UnsupportedOperationException();
+    Lock dlock = getRegionDistributedLock();
+    try {
+      getDataView().checkSupportsRegionClear();
+    } finally {
+      if (dlock != null)
+        dlock.unlock();
+    }
   }
 
   @Override
@@ -2322,6 +2328,39 @@ public class PartitionedRegion extends LocalRegion
     /*
      * No op on pr, will happen in the buckets etc.
      */
+  }
+
+  public synchronized long postClearSend(RegionEventImpl regionEvent) {
+
+    HashMap prMsgMap = createClearPRMessages();
+    Iterator itor = prMsgMap.entrySet().iterator();
+    while(itor.hasNext()) {
+      //BR: Later rework this to use our message class instead of bucketId
+      int bucketId = (int) itor.next();
+      checkReadiness();
+
+      sendClearMsgByBucket(bucketId);
+    }
+
+    return 0L;
+  }
+
+  private HashMap createClearPRMessages() {
+    HashMap prMsgMap = new HashMap();
+
+    for(int bucketId : dataStore.getAllLocalBucketIds()) {
+      //BR: Later, change the value of this put to an instance of our clear message class for that bucket id
+      prMsgMap.put(bucketId, bucketId);
+    }
+
+
+    return prMsgMap;
+  }
+
+  //BR: Later this will need to take our message class as a second param
+  private VersionedObjectList sendClearMsgByBucket(int bucketId) {
+
+    return null;
   }
 
   /**
@@ -3111,6 +3150,11 @@ public class PartitionedRegion extends LocalRegion
     // NOTREACHED
   }
 
+  private boolean removeFromBucket(final InternalDistributedMember targetNode, final Integer bucketId,
+                                   final EntryEventImpl event) {
+
+    return false;
+  }
 
   /**
    * Find an existing live Node that owns the bucket, or create the bucket and return one of its
